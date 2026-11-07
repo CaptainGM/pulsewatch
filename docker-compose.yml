@@ -1,0 +1,67 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: pulsewatch
+      POSTGRES_USER: pulsewatch
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-pulsewatch}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U pulsewatch -d pulsewatch"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  api:
+    build: ./backend
+    restart: unless-stopped
+    environment:
+      ENVIRONMENT: production
+      DATABASE_URL: postgresql+asyncpg://pulsewatch:${POSTGRES_PASSWORD:-pulsewatch}@postgres:5432/pulsewatch
+      REDIS_URL: redis://redis:6379/0
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:8080}
+      FRONTEND_URL: ${FRONTEND_URL:-http://localhost:8080}
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost:8080}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      OAUTH_ALLOWED_DOMAINS: ${OAUTH_ALLOWED_DOMAINS:-}
+      OAUTH_AUTO_CREATE: ${OAUTH_AUTO_CREATE:-false}
+      AUTH_ENABLED: ${AUTH_ENABLED:-true}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@pulsewatch.local}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-pulsewatch}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production-pulsewatch-secret}
+      SEED_DEMO: ${SEED_DEMO:-false}
+      RETENTION_DAYS: ${RETENTION_DAYS:-30}
+      ALERT_WEBHOOK_URL: ${ALERT_WEBHOOK_URL:-}
+      WEBHOOK_SIGNING_SECRET: ${WEBHOOK_SIGNING_SECRET:-}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  web:
+    build: ./frontend
+    restart: unless-stopped
+    ports:
+      - "${WEB_PORT:-8080}:80"
+    depends_on:
+      - api
+
+volumes:
+  pgdata:
+  redisdata:

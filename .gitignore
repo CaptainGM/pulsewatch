@@ -1,0 +1,25 @@
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+.pytest_cache/
+.ruff_cache/
+
+# Yerel veritabanı ve ortam dosyaları
+backend/data/
+*.db
+.env
+
+# Node
+node_modules/
+frontend/dist/
+npm-debug.log*
+
+# Editör ve işletim sistemi
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Baslatici kayitlari
+logs/
